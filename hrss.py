@@ -92,6 +92,31 @@ def status_patient_id(patient_id):
     return jsonify(patient_status)
 
 
+@app.route("/api/heart_rate/<patient_id>", methods={"GET"})
+def heart_rate_patient_id(patient_id):
+    patient = Patient.objects.raw({"_id": patient_id}).first()
+    past_heart_rates = patient.heart_rate
+    past_rate_times = patient.heart_rate_time
+    heart_rates = {
+        "patient_id": patient_id,
+        "stored_heart_rates": past_heart_rates,
+        "stored_heart_rate_times": past_rate_times
+    }
+    return jsonify(heart_rates)
+
+
+@app.route("/api/heart_rate/average/<patient_id>", methods={"GET"})
+def heart_rate_average(patient_id):
+    patient = Patient.objects.raw({"_id": patient_id}).first()
+    past_heart_rates = patient.heart_rate
+    average = sum(past_heart_rates) / len(past_heart_rates)
+    hr_average = {
+        "patient_id": patient_id,
+        "average_heart_rate": average
+    }
+    return jsonify(hr_average)
+
+
 if __name__ == "__main__":
     print("Run")
     # entry = Patient(1, 'sarah.putney@duke.edu', 13)
