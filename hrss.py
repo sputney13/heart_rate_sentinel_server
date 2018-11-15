@@ -117,6 +117,22 @@ def heart_rate_average(patient_id):
     return jsonify(hr_average)
 
 
+@app.route("/api/heart_rate/interval_average", methods={"POST"})
+def heart_rate_interval_average():
+    r = request.get_json()
+    patient = Patient.objects.raw({"_id": r["patient_id"]}).first()
+    past_rate_times = str(patient.heart_rate_time)
+    try:
+        time_index = past_rate_times.index(r["heart_rate_average_since"])
+        past_heart_rates = patient.heart_rate[time_index:-1]
+        interval_average = sum(past_heart_rates) / len(past_heart_rates)
+    except ValueError:
+        print("Heart rate data was not taken at this time,"
+              " enter a valid time.")
+        sys.exit(1)
+    return interval_average, 200
+
+
 if __name__ == "__main__":
     print("Run")
     # entry = Patient(1, 'sarah.putney@duke.edu', 13)
