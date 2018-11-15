@@ -5,6 +5,7 @@ import warnings
 from pymodm import connect
 from pymodm import MongoModel, fields
 import numpy as np
+from datetime import datetime
 import sendgrid
 import os
 from sendgrid.helpers.mail import *
@@ -30,7 +31,109 @@ def new_patient():
     return entry, 200
 
 
+@app.route("/api/heart_rate", methods={"POST"})
+def heart_rate():
+    r = request.get_json()
+    heart_rate_time_now = datetime.now()
+    patient = Patient.objects.raw({"_id": r["patient_id"]}).first()
+    patient.heart_rate.append(r["heart_rate"])
+    patient.heart_rate_time.append(heart_rate_time_now)
+    patient.save()
+    return patient, 200
+
+
+def tachycardia(patient_age, patient_heart_rate):
+    if patient_age < .008 and patient_heart_rate > 159:
+        tachycardic_status = "tachycardic"
+    elif patient_age < .019 and patient_heart_rate > 166:
+        tachycardic_status = "tachycardic"
+    elif patient_age < .083 and patient_heart_rate > 182:
+        tachycardic_status = "tachycardic"
+    elif patient_age < .250 and patient_heart_rate > 179:
+        tachycardic_status = "tachycardic"
+    elif patient_age < .500 and patient_heart_rate > 186:
+        tachycardic_status = "tachycardic"
+    elif patient_age < 1 and patient_heart_rate > 169:
+        tachycardic_status = "tachycardic"
+    elif patient_age < 3 and patient_heart_rate > 151:
+        tachycardic_status = "tachycardic"
+    elif patient_age < 5 and patient_heart_rate > 137:
+        tachycardic_status = "tachycardic"
+    elif patient_age < 8 and patient_heart_rate > 133:
+        tachycardic_status = "tachycardic"
+    elif patient_age < 12 and patient_heart_rate > 130:
+        tachycardic_status = "tachycardic"
+    elif patient_age <= 15 and patient_heart_rate > 119:
+        tachycardic_status = "tachycardic"
+    elif patient_heart_rate > 100:
+        tachycardic_status = "tachycardic"
+    else:
+        tachycardic_status = "not tachycardic"
+    return tachycardic_status
+
+
+def find_tachycardic_status(patient_id):
+    patient = Patient.objects.raw({"_id": patient_id}).first()
+    patient_age = patient.user_age
+    patient_heart_rate = patient.heart_rate[-1]
+    patient_time = patient.heart_rate_time[-1]
+    tachycardic_status = tachycardia(patient_age, patient_heart_rate)
+    return patient_time, tachycardic_status
+
+
+@app.route("/api/status/<patient_id>", methods=["GET"])
+def status_patient_id(patient_id):
+    patient_time, tachycardic_status = find_tachycardic_status(patient_id)
+    patient_status = {
+        "patient_id": patient_id,
+        "status": tachycardic_status,
+        "status_time": patient_time
+    }
+    return jsonify(patient_status)
+
+
+@app.route("/api/heart_rate/<patient_id>", methods={"GET"})
+def heart_rate_patient_id(patient_id):
+    patient = Patient.objects.raw({"_id": patient_id}).first()
+    past_heart_rates = patient.heart_rate
+    past_rate_times = patient.heart_rate_time
+    heart_rates = {
+        "patient_id": patient_id,
+        "stored_heart_rates": past_heart_rates,
+        "stored_heart_rate_times": past_rate_times
+    }
+    return jsonify(heart_rates)
+
+
+@app.route("/api/heart_rate/average/<patient_id>", methods={"GET"})
+def heart_rate_average(patient_id):
+    patient = Patient.objects.raw({"_id": patient_id}).first()
+    past_heart_rates = patient.heart_rate
+    average = sum(past_heart_rates) / len(past_heart_rates)
+    hr_average = {
+        "patient_id": patient_id,
+        "average_heart_rate": average
+    }
+    return jsonify(hr_average)
+
+
+@app.route("/api/heart_rate/interval_average", methods={"POST"})
+def heart_rate_interval_average():
+    r = request.get_json()
+    patient = Patient.objects.raw({"_id": r["patient_id"]}).first()
+    past_rate_times = str(patient.heart_rate_time)
+    try:
+        time_index = past_rate_times.index(r["heart_rate_average_since"])
+        past_heart_rates = patient.heart_rate[time_index:-1]
+        interval_average = sum(past_heart_rates) / len(past_heart_rates)
+    except ValueError:
+        print("Heart rate data was not taken at this time,"
+              " enter a valid time.")
+        sys.exit(1)
+    return interval_average, 200
+
+
 if __name__ == "__main__":
     print("Run")
-    entry = Patient(1, 'sarah.putney@duke.edu', 13)
-    entry.save()
+    # entry = Patient(1, 'sarah.putney@duke.edu', 13)
+    # entry.save()
