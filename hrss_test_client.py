@@ -117,7 +117,7 @@ def post_heart_rate_interval_average(patient_id, heart_rate_average_since):
 
 if __name__ == "__main__":
     # Example Execution for post_new_patient
-    post1 = post_new_patient(3, "attending@email.com", 1.4)
+    post1 = post_new_patient(3, "sarah.putney@duke.edu", 1.4)
     print(post1)
     # Example Execution for post_heart_rate
     post2 = post_heart_rate(3, 178)
