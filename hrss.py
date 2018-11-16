@@ -97,14 +97,19 @@ def tachycardia(patient_age, patient_heart_rate):
     return tachycardic_status
 
 
-@app.route("/api/status/<patient_id>", methods=["GET"])
-def status_patient_id(patient_id):
+def find_tachycardic_status(patient_id):
     patient_id = int(patient_id)
     patient = Patient.objects.raw({"_id": patient_id}).first()
     patient_age = patient.user_age
     patient_heart_rate = patient.heart_rate[-1]
     patient_time = patient.heart_rate_time[-1]
     tachycardic_status = tachycardia(patient_age, patient_heart_rate)
+    return patient_time, tachycardic_status
+
+
+@app.route("/api/status/<patient_id>", methods=["GET"])
+def status_patient_id(patient_id):
+    patient_time, tachycardic_status = find_tachycardic_status(patient_id)
     patient_status = {
         "patient_id": patient_id,
         "status": tachycardic_status,
