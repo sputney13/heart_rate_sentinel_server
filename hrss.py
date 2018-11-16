@@ -9,6 +9,9 @@ from sendgrid.helpers.mail import *
 
 app = Flask(__name__)
 connect('mongodb://sputney13:sputney13@ds155653.mlab.com:55653/bme590')
+
+SENDGRID_API_KEY = 'SENDGRID_API_KEY'
+
 logging.basicConfig(filename="hrss.log", filemode='w', level=logging.INFO)
 
 
@@ -96,6 +99,22 @@ def validate_heart_rate(r):
     logging.info("Passed heart rate POST validation.")
 
 
+def send_attending_email(attending_email, patient_id, time_stamp):
+    sg = sendgrid.SendGridAPIClient(apikey=os.environ.get(SENDGRID_API_KEY))
+    from_email = Email("sep52@duke.edu")
+    to_email = Email(attending_email)
+    subject = "WARNING: Tachycardic Patient"
+    content = Content("text/plain", "Patient ID " + patient_id + "displayed a"
+                                                                 "tachycardic"
+                                                                 "heart rate"
+                                                                 " at" +
+                      time_stamp)
+    mail = Mail(from_email, subject, to_email, content)
+    response = sg.client.mail.send.post(request_body=mail.get())
+    logging.info("Sent tachycardia warning email to attending.")
+    return str(response)
+
+
 @app.route("/api/heart_rate", methods={"POST"})
 def heart_rate():
     """ POSTS new patient heart rate information
@@ -113,11 +132,15 @@ def heart_rate():
     heart_rate_time_now = str(datetime.now())
     patient = Patient.objects.raw({"_id": r["patient_id"]}).first()
     patient_age = patient.user_age
+    attending_email = patient.attending_email
     patient.heart_rate.append(r["heart_rate"])
     patient.heart_rate_time.append(heart_rate_time_now)
     patient.save()
     logging.info("New heart rate posted to database.")
     tachycardic_status = tachycardia(patient_age, r["heart_rate"])
+    # if tachycardic_status is "tachycardic":
+    #     send_attending_email(attending_email, r["patient_id"],
+    #                          heart_rate_time_now)
     return tachycardic_status, 200
 
 
