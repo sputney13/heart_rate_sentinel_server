@@ -251,7 +251,7 @@ def heart_rate_average(patient_id):
         "patient_id": patient_id,
         "average_heart_rate": average
     }
-    logging.info("Patient heart rate average calculated and retrieved.")
+    logging.info("Patient heart rate average calculated: " + str(average))
     return jsonify(hr_average)
 
 
@@ -328,7 +328,8 @@ def heart_rate_interval_average():
                                    r["heart_rate_average_since"])
     past_heart_rates = patient.heart_rate[time_index:-1]
     interval_average = str(sum(past_heart_rates) / len(past_heart_rates))
-    logging.info("Heart rate interval average calculated.")
+    logging.info("Heart rate interval average calculated: " +
+                 interval_average + ' bpm')
     return interval_average, 200
 
 
