@@ -159,7 +159,7 @@ def tachycardia(patient_age, patient_heart_rate):
         tachycardic_status = "tachycardic"
     else:
         tachycardic_status = "not tachycardic"
-    logging.info("Tachycardic status calculated.")
+    logging.info("Tachycardic status calculated: " + tachycardic_status)
     return tachycardic_status
 
 
