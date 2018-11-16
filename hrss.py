@@ -147,9 +147,11 @@ def validate_heart_rate_interval_average(r):
         elif isinstance(r["heart_rate_average_since"], str) is False:
             raise TypeError("heart_rate_average_since must be a time string.")
         try:
-            datetime.strptime(r["heart_rate_average_since"], "%Y-%m-%d %H:%M:%S.%f")
+            datetime.strptime(r["heart_rate_average_since"],
+                              "%Y-%m-%d %H:%M:%S.%f")
         except ValueError:
-            raise ValueError("Time string must have format %Y-%m-%d %H:%M:%S.%f.")
+            raise ValueError("Time string must have format"
+                             " %Y-%m-%d %H:%M:%S.%f.")
     else:
         raise AttributeError("Post must be dict with patient_id and"
                              " heart_rate_average_since keys.")
@@ -170,7 +172,8 @@ def heart_rate_interval_average():
     validate_heart_rate_interval_average(r)
     patient = Patient.objects.raw({"_id": r["patient_id"]}).first()
     past_rate_times = patient.heart_rate_time
-    time_index = time_string_index(past_rate_times, r["heart_rate_average_since"])
+    time_index = time_string_index(past_rate_times,
+                                   r["heart_rate_average_since"])
     past_heart_rates = patient.heart_rate[time_index:-1]
     interval_average = str(sum(past_heart_rates) / len(past_heart_rates))
     return interval_average, 200
