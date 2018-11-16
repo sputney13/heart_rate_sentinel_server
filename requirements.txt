@@ -3,7 +3,6 @@ sphinx
 pytest
 pytest-pep8
 pytest-cov
-numpy
 requests
 flask
 pymodm
