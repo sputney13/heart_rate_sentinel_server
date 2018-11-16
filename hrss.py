@@ -1,9 +1,8 @@
 from flask import Flask, jsonify, request
 import logging
-import warnings
 from pymodm import connect
 from pymodm import MongoModel, fields
-from datetime import datetime, strftime, strptime
+from datetime import datetime
 import sendgrid
 import os
 from sendgrid.helpers.mail import *
@@ -17,23 +16,20 @@ class Patient(MongoModel):
     attending_email = fields.EmailField()
     user_age = fields.FloatField()
     heart_rate = fields.ListField(field=fields.IntegerField())
-    heart_rate_time = fields.ListField(field=fields.DateTimeField())
+    heart_rate_time = fields.ListField()
 
 
 def validate_new_patient(r):
-    if type(r) is dict and all(k in r for k
-                               in ("patient_id",
-                                   "attending_email", "user_age")):
+    if all(k in r for k in ("patient_id", "attending_email", "user_age")):
         if isinstance(r["patient_id"], int) is False:
             raise TypeError("patient_id must be an integer.")
-        elif isinstance(r["attending_email"], str) is False or\
-                "@".find(r["attending_email"]) is -1:
+        elif "@" not in r["attending_email"]:
             raise TypeError("attending_email must be an email string.")
-        elif isintance(r["user_age"], float) is False:
+        elif isinstance(r["user_age"], float) is False:
             raise TypeError("user_age must be a float.")
     else:
-        raise ValueError("Post must be dict with patient_id,"
-                         " attending_email, and user_age keys.")
+        raise AttributeError("Post must be dict with patient_id,"
+                             " attending_email, and user_age keys.")
 
 
 @app.route("/api/new_patient", methods=["POST"])
@@ -43,31 +39,32 @@ def new_patient():
     entry = Patient(r["patient_id"], attending_email=r["attending_email"],
                     user_age=r["user_age"])
     entry.save()
-    return entry, 200
+    return "Posted", 200
 
 
 def validate_heart_rate(r):
-    if type(r) is dict and all(k in r for k
-                               in ("patient_id", "heart_rate")):
+    if all(k in r for k in ("patient_id", "heart_rate")):
         if isinstance(r["patient_id"], int) is False:
             raise TypeError("patient_id must be an integer.")
         elif isinstance(r["heart_rate"], int) is False:
             raise TypeError("heart_rate must be an integer.")
     else:
-        raise ValueError("Post must be dict with patient_id and"
-                         " heart_rate keys.")
+        raise AttributeError("Post must be dict with patient_id and"
+                             " heart_rate keys.")
 
 
 @app.route("/api/heart_rate", methods={"POST"})
 def heart_rate():
     r = request.get_json()
     validate_heart_rate(r)
-    heart_rate_time_now = datetime.now()
+    heart_rate_time_now = str(datetime.now())
     patient = Patient.objects.raw({"_id": r["patient_id"]}).first()
+    patient_age = patient.user_age
     patient.heart_rate.append(r["heart_rate"])
     patient.heart_rate_time.append(heart_rate_time_now)
     patient.save()
-    return patient, 200
+    tachycardic_status = tachycardia(patient_age, r["heart_rate"])
+    return tachycardic_status
 
 
 def tachycardia(patient_age, patient_heart_rate):
@@ -100,18 +97,14 @@ def tachycardia(patient_age, patient_heart_rate):
     return tachycardic_status
 
 
-def find_tachycardic_status(patient_id):
+@app.route("/api/status/<patient_id>", methods=["GET"])
+def status_patient_id(patient_id):
+    patient_id = int(patient_id)
     patient = Patient.objects.raw({"_id": patient_id}).first()
     patient_age = patient.user_age
     patient_heart_rate = patient.heart_rate[-1]
     patient_time = patient.heart_rate_time[-1]
     tachycardic_status = tachycardia(patient_age, patient_heart_rate)
-    return patient_time, tachycardic_status
-
-
-@app.route("/api/status/<patient_id>", methods=["GET"])
-def status_patient_id(patient_id):
-    patient_time, tachycardic_status = find_tachycardic_status(patient_id)
     patient_status = {
         "patient_id": patient_id,
         "status": tachycardic_status,
@@ -122,6 +115,7 @@ def status_patient_id(patient_id):
 
 @app.route("/api/heart_rate/<patient_id>", methods={"GET"})
 def heart_rate_patient_id(patient_id):
+    patient_id = int(patient_id)
     patient = Patient.objects.raw({"_id": patient_id}).first()
     past_heart_rates = patient.heart_rate
     past_rate_times = patient.heart_rate_time
@@ -135,6 +129,7 @@ def heart_rate_patient_id(patient_id):
 
 @app.route("/api/heart_rate/average/<patient_id>", methods={"GET"})
 def heart_rate_average(patient_id):
+    patient_id = int(patient_id)
     patient = Patient.objects.raw({"_id": patient_id}).first()
     past_heart_rates = patient.heart_rate
     average = sum(past_heart_rates) / len(past_heart_rates)
@@ -146,8 +141,7 @@ def heart_rate_average(patient_id):
 
 
 def validate_heart_rate_interval_average(r):
-    if type(r) is dict and all(k in r for k in ("patient_id",
-                                                "heart_rate_average_since")):
+    if all(k in r for k in ("patient_id", "heart_rate_average_since")):
         if isinstance(r["patient_id"], int) is False:
             raise TypeError("patient_id must be an integer.")
         elif isinstance(r["heart_rate_average_since"], str) is False:
@@ -157,14 +151,13 @@ def validate_heart_rate_interval_average(r):
         except ValueError:
             raise ValueError("Time string must have format %Y-%m-%d %H:%M:%S.%f.")
     else:
-        raise ValueError("Post must be dict with patient_id and"
-                         " heart_rate_average_since keys.")
+        raise AttributeError("Post must be dict with patient_id and"
+                             " heart_rate_average_since keys.")
 
 
 def time_string_index(past_rate_times, date_string):
-    past_time_strings = past_rate_times.strftime("%Y-%m-%d %H:%M:%S.%f")
     try:
-        time_index = past_time_strings.index(date_string)
+        time_index = past_rate_times.index(date_string)
     except ValueError:
         raise ValueError("Heart rate data was not taken at this time,"
                          " enter a valid time.")
@@ -179,12 +172,9 @@ def heart_rate_interval_average():
     past_rate_times = patient.heart_rate_time
     time_index = time_string_index(past_rate_times, r["heart_rate_average_since"])
     past_heart_rates = patient.heart_rate[time_index:-1]
-    interval_average = sum(past_heart_rates) / len(past_heart_rates)
+    interval_average = str(sum(past_heart_rates) / len(past_heart_rates))
     return interval_average, 200
 
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1")
-    print("Run")
-    # entry = Patient(1, 'sarah.putney@duke.edu', 13)
-    # entry.save()
