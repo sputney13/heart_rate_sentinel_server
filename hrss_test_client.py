@@ -1,6 +1,6 @@
 import requests
 
-api_host = "http://vcm-7129.vm.duke.edu:5000"
+api_host = "http://vcm-7192.vm.duke.edu:5000"
 
 
 def post_new_patient(patient_id, attending_email, user_age):
@@ -132,5 +132,5 @@ if __name__ == "__main__":
     hr_average = get_heart_rate_average(3)
     print(hr_average)
     # Example Execution for post_heart_rate_interval_average
-    post3 = post_heart_rate_interval_average(1, "2018-11-16 01:19:29.168676")
+    post3 = post_heart_rate_interval_average(1, "2018-11-16 01:32:54.071654")
     print(post3)
