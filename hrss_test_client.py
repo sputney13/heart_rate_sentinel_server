@@ -21,19 +21,19 @@ def post_heart_rate(patient_id, heart_rate):
 
 
 def get_status_patient_id():
-    r = requests.get('http://127.0.0.1:5000/api/status/1')
+    r = requests.get('http://127.0.0.1:5000/api/status/3')
     patient_status = r.json()
     return patient_status
 
 
 def get_heart_rate_patient_id():
-    r = requests.get('http://127.0.0.1:5000/api/heart_rate/1')
+    r = requests.get('http://127.0.0.1:5000/api/heart_rate/3')
     hr_list = r.json()
     return hr_list
 
 
 def get_heart_rate_average():
-    r = requests.get('http://127.0.0.1:5000/api/heart_rate/average/1')
+    r = requests.get('http://127.0.0.1:5000/api/heart_rate/average/3')
     hr_average = r.json()
     return hr_average
 
@@ -43,17 +43,18 @@ def post_heart_rate_interval_average(patient_id, heart_rate_average_since):
         "patient_id": patient_id,
         "heart_rate_average_since": heart_rate_average_since
     }
-    r = requests.post('http://127.0.0.1:5000/api/heart_rate/interval_average', json=data)
+    r = requests.post('http://127.0.0.1:5000/api/heart_rate/'
+                      'interval_average', json=data)
     return r
 
 
 if __name__ == "__main__":
     post1 = post_new_patient(3, "sarah.putney@duke.edu", 1.4)
-    post2 = post_heart_rate(3, [178])
+    post2 = post_heart_rate(3, 178)
     patient_status = get_status_patient_id()
     hr_list = get_heart_rate_patient_id()
     hr_average = get_heart_rate_average()
-    post3 = post_heart_rate_interval_average()
+    post3 = post_heart_rate_interval_average(1, "2018-11-16 01:19:29.168676")
     print(post1)
     print(post2)
     print(patient_status)
