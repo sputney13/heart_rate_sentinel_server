@@ -357,4 +357,4 @@ def heart_rate_interval_average():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1")
+    app.run(host="vcm-7129.vm.duke.edu")
